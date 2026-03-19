@@ -16,7 +16,6 @@ A small TypeScript CLI app that uses the OpenAI Agents SDK to let one agent talk
 ## Setup
 
 ```bash
-cd "/Users/esia/repos/chat/2 agent chat"
 cp .env.example .env
 ```
 

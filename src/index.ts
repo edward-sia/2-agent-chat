@@ -8,7 +8,7 @@ function requireApiKey(): string {
 
   if (!apiKey) {
     console.error("Missing OPENAI_API_KEY.");
-    console.error('Create "/Users/esia/repos/chat/2 agent chat/.env" from ".env.example" and add your key.');
+    console.error('Create ".env" from ".env.example" and add your key.');
     process.exit(1);
   }
 
