@@ -2,6 +2,7 @@ import type { PatternDefinition, PatternId } from "../lib/types.js";
 import { runAgentsAsTools } from "./agentsAsTools.js";
 import { runBasicHandoff } from "./basicHandoff.js";
 import { runStructuredHandoff } from "./structuredHandoff.js";
+import { runHybridHandoffWithTools } from "./hybridHandoffWithTools.js";
 import { runCodeRouter } from "./codeRouter.js";
 import { runParallelFanout } from "./parallelFanout.js";
 import { runFeedbackLoop } from "./feedbackLoop.js";
@@ -36,6 +37,16 @@ export const patterns: PatternDefinition[] = [
     whenToUse: "Use this when the receiving agent needs a compact, typed briefing.",
     defaultTask: "Plan me a 4-day Tokyo trip on a medium budget with vegetarian food options.",
     run: runStructuredHandoff
+  },
+  {
+    id: "hybrid",
+    title: "Hybrid Handoff Plus Tools",
+    analogy: "A receptionist transfers you to a travel consultant, and that consultant then quietly calls their in-house budget analyst and local guide.",
+    whoDecides: "The model decides",
+    summary: "A triage agent hands off to a specialist, and that specialist still uses other agents as tools for bounded subtasks.",
+    whenToUse: "Use this when you want a specialist to take over, but that specialist still benefits from its own mini-team.",
+    defaultTask: "Plan a 5-day Kyoto trip for two people with a careful budget and food recommendations near train lines.",
+    run: runHybridHandoffWithTools
   },
   {
     id: "code-router",

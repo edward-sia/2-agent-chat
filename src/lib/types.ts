@@ -2,6 +2,7 @@ export type PatternId =
   | "agents-as-tools"
   | "handoff"
   | "structured-handoff"
+  | "hybrid"
   | "code-router"
   | "parallel"
   | "feedback-loop";
