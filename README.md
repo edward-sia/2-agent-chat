@@ -110,29 +110,78 @@ The project loads `OPENAI_API_KEY` from your environment through `dotenv/config`
 
 Pick this when you want one consistent assistant persona. The manager stays visible to the user and quietly consults specialists behind the scenes.
 
+```text
+user question → managerAgent()
+                  ├→ researchAgent() → background notes
+                  ├→ skepticAgent()  → risks and caveats
+                  └→ managerAgent()  → final answer to user
+```
+
 ### `handoff`
 
 Pick this when you want the specialist to become the active responder. The original agent is more like a receptionist than a manager.
+
+```text
+user request → triageAgent() → billingAgent()   → final answer
+                           └→ technicalAgent() → final answer
+```
 
 ### `structured-handoff`
 
 Pick this when a transfer needs clean metadata, like urgency, budget, or a summary. This makes the transition feel less like a free-form chat and more like a proper intake process.
 
+```text
+user request → conciergeAgent() → intakeForm()
+                                 (goal, budget, urgency, constraints)
+              → travelSpecialist() → final plan
+```
+
 ### `hybrid`
 
 Pick this when the specialist should take over the conversation, but that specialist still needs a small backstage team. This is often the most realistic production shape for complex workflows.
+
+```text
+user request → triageAgent() → travelPlannerAgent()
+                                ├→ budgetAnalyst() → budget tradeoffs
+                                ├→ localGuide()    → local tips
+                                └→ travelPlanner() → final itinerary
+```
 
 ### `code-router`
 
 Pick this when you need deterministic application logic. Your app can inspect the routing result, apply rules, log decisions, or override them before calling the next subagent.
 
+```text
+user task → routerAgent() → app code chooses next agent
+                            ├→ teacherAgent() → explanation
+                            ├→ plannerAgent() → plan
+                            ├→ criticAgent()  → critique
+                            └→ editorAgent()  → final answer
+```
+
 ### `parallel`
 
 Pick this when several specialists can work independently. It is often the best latency tradeoff for research, critique, and synthesis workflows.
 
+```text
+user task → app code
+             ├→ researchAgent()   → useful ideas
+             ├→ challengerAgent() → risks and counterpoints
+             ├→ simplifierAgent() → plain-English version
+             └→ editorAgent()     → merged final answer
+```
+
 ### `feedback-loop`
 
 Pick this when the first draft is rarely the final draft. A writer-reviewer loop is useful for polishing quality, but it should always have a maximum number of rounds.
+
+```text
+user task → writerAgent()   → draft 1
+          → reviewerAgent() → feedback
+          → writerAgent()   → revised draft
+          → reviewerAgent() → approved
+          → final output
+```
 
 ## Scripts
 
