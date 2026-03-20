@@ -1,25 +1,57 @@
-# 2 Agent Chat
+# 2 Agent Chat Learning Kit
 
-A small TypeScript CLI app that uses the OpenAI Agents SDK to let one agent talk to another agent.
+A TypeScript project that teaches the main ways to make one OpenAI agent call subagents.
 
-## What it does
+Instead of showing only one pattern, this repo compares the most useful orchestration styles side by side so you can learn when each one fits.
 
-- `Main Agent` is the user-facing assistant.
-- `Research Agent` is a specialist the main agent can call as a tool.
-- The CLI keeps chat history in memory for the current run.
+## The big idea
+
+There are two broad ways to build multi-agent systems:
+
+1. The model decides what happens next.
+   - Example: the current agent calls a subagent as a tool.
+   - Example: the current agent hands the conversation to another agent.
+2. Your code decides what happens next.
+   - Example: your app chooses the next agent after looking at a routing result.
+   - Example: your app runs several agents in parallel and merges the results.
+   - Example: your app loops a writer and reviewer until the output is good enough.
+
+## Analogy-first map
+
+| Pattern | Analogy | Who decides next step? | Best for |
+| --- | --- | --- | --- |
+| `agents-as-tools` | A team lead calls specialists but stays on the customer call | The model | One stable user-facing assistant |
+| `handoff` | A receptionist transfers your call to a department | The model | Letting a specialist take over |
+| `structured-handoff` | A nurse fills out an intake form before the specialist sees you | The model | Predictable transfers with typed metadata |
+| `code-router` | A dispatcher chooses the next worker using a routing sheet | Your code | Deterministic routing and business logic |
+| `parallel` | An editor sends the same story to several reviewers at once | Your code | Faster independent specialist work |
+| `feedback-loop` | A writer and editor revise until the draft is ready | Your code | Quality-improving iterative workflows |
+
+## Project structure
+
+| File | Purpose |
+| --- | --- |
+| `src/index.ts` | CLI entry point |
+| `src/patterns/agentsAsTools.ts` | Manager agent calls specialists as tools |
+| `src/patterns/basicHandoff.ts` | Triage agent hands off to a specialist |
+| `src/patterns/structuredHandoff.ts` | Handoff with typed intake data |
+| `src/patterns/codeRouter.ts` | Your code routes to the next specialist |
+| `src/patterns/parallelFanout.ts` | Your code runs multiple specialists in parallel |
+| `src/patterns/feedbackLoop.ts` | Your code runs critique-and-revise loops |
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - An OpenAI API key
 
 ## Setup
 
 ```bash
+cd "/Users/esia/repos/chat/2 agent chat"
 cp .env.example .env
 ```
 
-Add your API key to `.env`:
+Then add your key:
 
 ```env
 OPENAI_API_KEY=your_real_api_key_here
@@ -31,27 +63,77 @@ Install dependencies:
 npm install
 ```
 
-## Run
+## Learn without spending tokens
 
-Start the interactive chat:
-
-```bash
-npm run dev
-```
-
-Build and run the compiled app:
+These commands only print explanations. They do not call the API.
 
 ```bash
-npm run build
-npm start
+npm run tour
+npm run explain agents-as-tools
+npm run explain handoff
 ```
 
-## CLI commands
+## Run demos
 
-- `exit` or `quit`: leave the app
-- `/reset`: clear the in-memory conversation
-- `/help`: show the command list
+These commands call the OpenAI API.
+
+```bash
+npm run demo -- agents-as-tools "Help me compare two ways to learn TypeScript quickly."
+npm run demo -- handoff "I was charged twice and now the app says my account is locked."
+npm run demo -- structured-handoff "Plan me a 4-day Tokyo trip on a medium budget with vegetarian food options."
+npm run demo -- code-router "Teach me closures in JavaScript, but point out common misconceptions too."
+npm run demo -- parallel "Give me a balanced recommendation for starting a small online business."
+npm run demo -- feedback-loop "Write a concise explanation of recursion for a beginner."
+```
+
+You can also skip the `demo` keyword:
+
+```bash
+npm run dev -- agents-as-tools
+npm run dev -- handoff
+```
 
 ## How the key is supplied
 
-The app reads `OPENAI_API_KEY` from your environment. Because `src/index.ts` imports `dotenv/config`, values in `.env` are loaded automatically before the SDK is used.
+The project loads `OPENAI_API_KEY` from your environment through `dotenv/config`.
+
+- `.env` is read automatically on startup.
+- `src/lib/env.ts` validates the key and calls `setDefaultOpenAIKey(...)`.
+- The SDK then uses that default key when `run(...)` invokes the model.
+
+## Choosing the right pattern
+
+### `agents-as-tools`
+
+Pick this when you want one consistent assistant persona. The manager stays visible to the user and quietly consults specialists behind the scenes.
+
+### `handoff`
+
+Pick this when you want the specialist to become the active responder. The original agent is more like a receptionist than a manager.
+
+### `structured-handoff`
+
+Pick this when a transfer needs clean metadata, like urgency, budget, or a summary. This makes the transition feel less like a free-form chat and more like a proper intake process.
+
+### `code-router`
+
+Pick this when you need deterministic application logic. Your app can inspect the routing result, apply rules, log decisions, or override them before calling the next subagent.
+
+### `parallel`
+
+Pick this when several specialists can work independently. It is often the best latency tradeoff for research, critique, and synthesis workflows.
+
+### `feedback-loop`
+
+Pick this when the first draft is rarely the final draft. A writer-reviewer loop is useful for polishing quality, but it should always have a maximum number of rounds.
+
+## Scripts
+
+```bash
+npm run tour
+npm run explain -- <pattern>
+npm run demo -- <pattern> "your task"
+npm run check
+npm run build
+npm start
+```

@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "tour": "tsx src/index.ts tour",
+    "explain": "tsx src/index.ts explain",
+    "demo": "tsx src/index.ts demo",
+    "check": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js"
   },

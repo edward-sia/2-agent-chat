@@ -1,113 +1,119 @@
-import "dotenv/config";
-import { Agent, MemorySession, run, setDefaultOpenAIKey } from "@openai/agents";
-import { createInterface } from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
+import { configureOpenAI } from "./lib/env.js";
+import type { DemoResult, PatternDefinition } from "./lib/types.js";
+import { getPattern, isPatternId, patterns } from "./patterns/index.js";
 
-function requireApiKey(): string {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-
-  if (!apiKey) {
-    console.error("Missing OPENAI_API_KEY.");
-    console.error('Create ".env" from ".env.example" and add your key.');
-    process.exit(1);
-  }
-
-  return apiKey;
-}
-
-function printHelp(): void {
+function printUsage(): void {
+  console.log("2 Agent Chat Learning Kit");
+  console.log("");
   console.log("Commands:");
-  console.log("  /help   Show this help text");
-  console.log("  /reset  Clear the current chat session");
-  console.log("  exit    Quit the app");
-  console.log("  quit    Quit the app");
+  console.log("  npm run dev -- tour");
+  console.log("  npm run dev -- explain <pattern>");
+  console.log('  npm run dev -- demo <pattern> "your task"');
+  console.log("  npm run dev -- <pattern>");
+  console.log("");
+  console.log("Pattern IDs:");
+
+  for (const pattern of patterns) {
+    console.log(`  - ${pattern.id}`);
+  }
 }
 
-function formatOutput(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
+function printPattern(pattern: PatternDefinition): void {
+  console.log(`${pattern.title} (${pattern.id})`);
+  console.log(`Analogy: ${pattern.analogy}`);
+  console.log(`Who decides: ${pattern.whoDecides}`);
+  console.log(`What it is: ${pattern.summary}`);
+  console.log(`When to use it: ${pattern.whenToUse}`);
+  console.log(`Try it with: npm run dev -- demo ${pattern.id} "${pattern.defaultTask}"`);
+}
+
+function printTour(): void {
+  console.log("2 Agent Chat Learning Tour");
+  console.log("");
+  console.log("Think of multi-agent design as choosing who gets to decide the next move:");
+  console.log("  1. The model decides by calling a tool or a handoff.");
+  console.log("  2. Your code decides by calling run() again in a shape you control.");
+  console.log("");
+
+  for (const pattern of patterns) {
+    printPattern(pattern);
+    console.log("");
+  }
+}
+
+function printDemo(pattern: PatternDefinition, task: string, result: DemoResult): void {
+  console.log(`${pattern.title}`);
+  console.log(`Analogy: ${pattern.analogy}`);
+  console.log(`Task: ${task}`);
+  console.log("");
+  console.log("Trace:");
+
+  for (const line of result.trace) {
+    console.log(`  - ${line}`);
   }
 
-  if (value == null) {
-    return "";
+  console.log("");
+  console.log("Notes:");
+
+  for (const note of result.notes) {
+    console.log(`  - ${note}`);
   }
 
-  return JSON.stringify(value, null, 2);
+  console.log("");
+  console.log("Final output:");
+  console.log(result.finalOutput);
+}
+
+async function runDemo(patternId: string | undefined, taskParts: string[]): Promise<void> {
+  const pattern = getPattern(patternId);
+
+  if (!pattern) {
+    throw new Error(`Unknown pattern "${patternId ?? ""}". Run "npm run dev -- tour" to see valid pattern IDs.`);
+  }
+
+  configureOpenAI();
+
+  const task = taskParts.join(" ").trim() || pattern.defaultTask;
+  const result = await pattern.run(task);
+  printDemo(pattern, task, result);
 }
 
 async function main(): Promise<void> {
-  setDefaultOpenAIKey(requireApiKey());
+  const args = process.argv.slice(2);
+  const [command, ...rest] = args;
 
-  const researchAgent = new Agent({
-    name: "Research Agent",
-    instructions: [
-      "You are a specialist assistant used by another agent.",
-      "Return concise background notes, facts, and options.",
-      "Do not address the end user directly.",
-      "Do not include greetings, sign-offs, or filler."
-    ].join(" ")
-  });
-
-  const mainAgent = new Agent({
-    name: "Main Agent",
-    instructions: [
-      "You are the user-facing assistant in a two-agent system.",
-      "You may call the research_agent tool whenever you need background research or a second opinion.",
-      "After using the tool, synthesize the result into a clear final answer for the user.",
-      "Never mention internal tool traces unless the user asks how the system works."
-    ].join(" "),
-    tools: [
-      researchAgent.asTool({
-        toolName: "research_agent",
-        toolDescription: "Ask the research specialist for notes or supporting detail."
-      })
-    ]
-  });
-
-  const session = new MemorySession();
-  const rl = createInterface({ input, output });
-
-  console.log("2 Agent Chat");
-  console.log("Type a message to chat with the main agent.");
-  console.log('Type "/help" for commands.\n');
-
-  while (true) {
-    const userInput = (await rl.question("you> ")).trim();
-
-    if (!userInput) {
-      continue;
-    }
-
-    const normalized = userInput.toLowerCase();
-
-    if (normalized === "exit" || normalized === "quit") {
-      break;
-    }
-
-    if (normalized === "/help") {
-      printHelp();
-      console.log("");
-      continue;
-    }
-
-    if (normalized === "/reset") {
-      await session.clearSession();
-      console.log("assistant> Conversation cleared.\n");
-      continue;
-    }
-
-    try {
-      const result = await run(mainAgent, userInput, { session });
-      const finalOutput = formatOutput(result.finalOutput);
-
-      console.log(`assistant> ${finalOutput}\n`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`assistant> Request failed: ${message}\n`);
-    }
+  if (!command || command === "help" || command === "--help" || command === "-h") {
+    printUsage();
+    return;
   }
 
-  rl.close();
+  if (command === "tour" || command === "list") {
+    printTour();
+    return;
+  }
+
+  if (command === "explain") {
+    const pattern = getPattern(rest[0]);
+
+    if (!pattern) {
+      throw new Error(`Unknown pattern "${rest[0] ?? ""}".`);
+    }
+
+    printPattern(pattern);
+    return;
+  }
+
+  if (command === "demo") {
+    await runDemo(rest[0], rest.slice(1));
+    return;
+  }
+
+  if (isPatternId(command)) {
+    await runDemo(command, rest);
+    return;
+  }
+
+  throw new Error(`Unknown command "${command}". Run "npm run dev -- tour" for help.`);
 }
 
 main().catch((error) => {
